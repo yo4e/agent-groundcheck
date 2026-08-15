@@ -1,0 +1,64 @@
+{
+  "name": "agent-groundcheck",
+  "version": "0.1.0",
+  "description": "Detect PR-introduced drift between coding-agent instructions and repository facts.",
+  "keywords": [
+    "agents-md",
+    "claude-md",
+    "github-action",
+    "coding-agents",
+    "instruction-drift",
+    "lint",
+    "cli"
+  ],
+  "license": "MIT",
+  "author": "Agent Groundcheck contributors",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yo4e/agent-groundcheck.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yo4e/agent-groundcheck/issues"
+  },
+  "homepage": "https://github.com/yo4e/agent-groundcheck#readme",
+  "type": "commonjs",
+  "main": "dist/cli.js",
+  "bin": {
+    "agent-groundcheck": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "action.yml",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.15.0",
+  "scripts": {
+    "build": "tsup",
+    "start": "node dist/cli.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
+    "prepare": "pnpm build"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "mdast-util-from-markdown": "^2.0.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.33.0",
+    "@types/node": "^22.15.30",
+    "eslint": "^9.33.0",
+    "globals": "^16.3.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.39.0",
+    "vitest": "^3.2.4"
+  }
+}

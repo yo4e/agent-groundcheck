@@ -1,7 +1,7 @@
 # Agent Groundcheck — Initial Product Brief
 
-Status: **Working draft v0.1**  
-Purpose: define the initial product hypothesis before competitive research and implementation.
+Status: **Implemented v0.1 / validated engineering wedge**
+Purpose: record the product hypothesis, the research-driven PIVOT, and the implemented v0.1 scope. Market validation remains ongoing.
 
 ## 1. Problem
 
@@ -54,9 +54,9 @@ Secondary users may include monorepo maintainers, platform teams, and organizati
 
 The MVP should be intentionally small and high-confidence.
 
-### Candidate MVP rules
+### MVP rules and research outcome
 
-The exact list is provisional until research is complete.
+Research completed on 2026-08-15. AGC001 and AGC002 are implemented; AGC003 and AGC004 remain explicitly deferred.
 
 #### AGC001 — Referenced path no longer exists
 
@@ -261,4 +261,4 @@ Do not ship AGC003 runtime-version drift or AGC004 scope drift in v0.1. Runtime 
 
 Implementation proceeds only after a reproducible public-repository corpus shows multiple true PR-introduced cases, a high manual-review precision for blocking findings, and external maintainer evidence that the check is useful in CI. If these conditions are not met, stop rather than expanding into a generic agent-instruction linter.
 
-See [`RESEARCH_REPORT_2026-08-15.md`](./RESEARCH_REPORT_2026-08-15.md) for the evidence, competitor matrix, feasibility analysis, and validation plan.
+See [`RESEARCH_REPORT_2026-08-15.md`](./RESEARCH_REPORT_2026-08-15.md) for the evidence, competitor matrix, feasibility analysis, and validation plan. See [`IMPLEMENTATION_NOTES.md`](./IMPLEMENTATION_NOTES.md) for the final v0.1 contract, fixture provenance, and remaining external-validation gate.

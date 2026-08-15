@@ -1,0 +1,16 @@
+name: Agent Groundcheck
+description: Detect PR-introduced drift between coding-agent instructions and repository facts.
+author: Agent Groundcheck contributors
+branding:
+  icon: check-circle
+  color: blue
+inputs:
+  base:
+    description: Base Git revision. Automatically resolved for pull_request events when omitted.
+    required: false
+  head:
+    description: Head Git revision. Automatically resolved for pull_request events when omitted.
+    required: false
+runs:
+  using: node20
+  main: dist/action.js

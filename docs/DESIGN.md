@@ -1,7 +1,7 @@
 # Agent Groundcheck — Working Technical Design
 
-Status: **Draft v0.1 / research-gated**  
-Implementation language and exact package layout are proposed, not frozen.
+Status: **Implemented v0.1 / external-validation-gated**
+TypeScript/Node.js, the core engine, CLI, Action, and fixture tests are implemented. Broader product validation remains gated on real external usage.
 
 ## 1. Design goal
 
@@ -11,7 +11,15 @@ Build a deterministic engine that can answer:
 
 The first implementation should optimize for explainability and low false positives, not broad semantic understanding.
 
-## 2. Proposed implementation stack
+## 1.1 Implemented v0.1 boundary
+
+The production core is shared by `agent-groundcheck check`, `agent-groundcheck pr-check`, and the GitHub Action. It reads base/head Git objects directly, parses Markdown AST nodes, and implements only AGC001 (path drift) and AGC002 (explicit package-script drift). `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md` are content-inspected; full scope, precedence, import, glob, and symlink semantics are deferred.
+
+PR mode emits `new`, `existing`, and `fixed` groups. Only new findings produce the default nonzero exit code and Action annotations. The current-state command may report any high-confidence stale claim. Ambiguous workspace resolution is skipped rather than guessed.
+
+See [`IMPLEMENTATION_NOTES.md`](./IMPLEMENTATION_NOTES.md) for the exact extraction boundary, public-history validation status, and fixture provenance.
+
+## 2. Implemented stack
 
 ### Language
 
@@ -80,7 +88,7 @@ Initial candidates:
 - `GEMINI.md`;
 - `.github/copilot-instructions.md`.
 
-**Research gate:** do not claim support until precedence, scoping, and practical usage are verified for each format.
+**v0.1 support boundary:** files are discovered and their contents are inspected. The engine does not claim to implement each format's precedence, import, symlink, glob, or cross-file scope semantics.
 
 Each source should have:
 
@@ -507,7 +515,7 @@ agent-groundcheck/
 
 Do not scaffold all modules until the research gate confirms the wedge.
 
-## 18. Suggested implementation slices
+## 18. Implementation history and future slices
 
 ### Slice 0 — research and corpus
 

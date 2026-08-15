@@ -1,0 +1,8 @@
+node_modules/
+coverage/
+*.log
+.DS_Store
+
+# The compiled Action and CLI are intentionally committed for GitHub Action users.
+!dist/
+!dist/**
