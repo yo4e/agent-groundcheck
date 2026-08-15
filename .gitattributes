@@ -1,0 +1,2 @@
+# Generated bundles may retain whitespace from vendored upstream source maps or code.
+dist/** whitespace=-trailing-space

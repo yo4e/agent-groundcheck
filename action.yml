@@ -12,5 +12,5 @@ inputs:
     description: Head Git revision. Automatically resolved for pull_request events when omitted.
     required: false
 runs:
-  using: node20
+  using: node24
   main: dist/action.js

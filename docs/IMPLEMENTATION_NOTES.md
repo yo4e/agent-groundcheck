@@ -22,7 +22,7 @@ Only newly introduced drift blocks `pr-check`. Pre-existing stale instructions a
 | AGC002 | Only explicit `npm run`/`pnpm run`/`yarn run` invocations are claims. A `new` finding requires the resolved manifest to contain the script at base and lack it at head. The nearest enclosing `package.json`, then root manifest, is used unless `--workspace` resolves to exactly one package name. |
 | Ambiguity | Skip rather than guess. Ambiguous workspace resolution is non-blocking and counted in output. |
 | Output | Human-readable console text and JSON, with blocking `new`, non-blocking `unproven`, `existing`, and `fixed` groups. SARIF is intentionally deferred. |
-| Action | `action.yml` uses Node 20, resolves PR SHAs from local event data or explicit inputs, creates line annotations for new findings, and requires no write permission. |
+| Action | `action.yml` uses Node 24, bundles runtime dependencies into `dist/action.js`, resolves PR SHAs from local event data or explicit inputs, creates line annotations for new findings, and requires no write permission. |
 
 ## Public-history validation status
 

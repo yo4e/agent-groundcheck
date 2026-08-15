@@ -93,7 +93,7 @@ The JSON schema is intentionally plain and stable enough for CI consumers: it co
 
 ## GitHub Action
 
-The action uses no GitHub API and requests no write permission. On `pull_request`, it reads the event's base/head SHAs locally, emits annotations for **new** findings, writes a job summary, and fails only for those new findings.
+The Action runs on Node.js 24, uses no GitHub API, and requests no write permission. On `pull_request`, it reads the event's base/head SHAs locally, emits annotations for **new** findings, writes a job summary, and fails only for those new findings.
 
 ```yaml
 name: Agent instruction drift
