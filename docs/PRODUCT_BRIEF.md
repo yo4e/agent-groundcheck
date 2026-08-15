@@ -243,3 +243,22 @@ Change or stop the project if research shows that:
 - the tool cannot provide meaningful value beyond ordinary dead-link or package-script linting.
 
 The goal is to find a useful OSS problem, not to preserve the initial idea at all costs.
+
+## 15. Research decision — 2026-08-15
+
+**Decision: PIVOT, then validate before broad implementation.**
+
+The research confirms that coding-agent instruction drift is real, but it also confirms that current-state instruction linting is already directly served. In particular, existing tools check missing paths and package scripts against the current repository state. The differentiated product contract is therefore narrower:
+
+> Report only deterministic instruction claims that were valid at the pull request base and became invalid at its head; treat pre-existing findings as non-blocking baseline debt.
+
+The v0.1 implementation is limited to two checks:
+
+1. **AGC001 — PR-introduced stale repository path.** Extract only high-confidence repository-relative path references. Report when the path exists at base and is missing at head; show a Git rename hint only as supplemental evidence.
+2. **AGC002 — PR-introduced stale package script.** Extract explicit npm/pnpm/yarn script invocations and report only scripts that existed in the resolved manifest at base and are missing at head.
+
+Do not ship AGC003 runtime-version drift or AGC004 scope drift in v0.1. Runtime authority needs an explicit precedence policy, and instruction scope semantics vary substantially across Codex, Claude Code, Copilot, and Gemini CLI. Do not add generic Markdown linting, quality scoring, LLM-based contradiction detection, arbitrary command execution, or automatic rewrites.
+
+Implementation proceeds only after a reproducible public-repository corpus shows multiple true PR-introduced cases, a high manual-review precision for blocking findings, and external maintainer evidence that the check is useful in CI. If these conditions are not met, stop rather than expanding into a generic agent-instruction linter.
+
+See [`RESEARCH_REPORT_2026-08-15.md`](./RESEARCH_REPORT_2026-08-15.md) for the evidence, competitor matrix, feasibility analysis, and validation plan.
