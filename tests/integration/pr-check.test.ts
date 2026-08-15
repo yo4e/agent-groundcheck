@@ -31,6 +31,24 @@ describe("pr-check", () => {
     expect(result.existingFindings).toHaveLength(0);
   });
 
+  it("resolves a nested instruction path relative to that instruction file", async () => {
+    const repo = await repository();
+    await repo.write("packages/docs/AGENTS.md", "Read `guides/release.md` before publishing.\n");
+    await repo.write("packages/docs/guides/release.md", "# Release guide\n");
+    const base = repo.commit("add nested release guidance");
+    await repo.remove("packages/docs/guides/release.md");
+    const head = repo.commit("remove nested release guide");
+
+    const result = await checkPullRequest(repo.cwd, base, head);
+    if (result.mode !== "pr-check") return;
+    expect(result.newFindings).toHaveLength(1);
+    expect(result.newFindings[0]).toMatchObject({ ruleId: "AGC001", sourcePath: "packages/docs/AGENTS.md" });
+    expect(result.newFindings[0].evidence).toContainEqual({
+      label: "checked paths",
+      value: "guides/release.md, packages/docs/guides/release.md"
+    });
+  });
+
   it("includes a rename hint without relying on rename inference for the finding", async () => {
     const repo = await repository();
     await repo.write("AGENTS.md", "Read `docs/architecture.md`.\n");
@@ -56,6 +74,20 @@ describe("pr-check", () => {
     if (result.mode !== "pr-check") return;
     expect(result.newFindings).toHaveLength(0);
     expect(result.existingFindings).toHaveLength(1);
+  });
+
+  it("reports a newly added already-stale claim as unproven and non-blocking", async () => {
+    const repo = await repository();
+    await repo.write("README.md", "# Test repository\n");
+    const base = repo.commit("add repository readme");
+    await repo.write("AGENTS.md", "Read `docs/not-created.md` before changing code.\n");
+    const head = repo.commit("add incomplete instruction");
+
+    const result = await checkPullRequest(repo.cwd, base, head);
+    if (result.mode !== "pr-check") return;
+    expect(result.newFindings).toHaveLength(0);
+    expect(result.unprovenFindings).toHaveLength(1);
+    expect(result.existingFindings).toHaveLength(0);
   });
 
   it("does not report a path when the instruction is updated in the same rename", async () => {
@@ -115,6 +147,20 @@ describe("pr-check", () => {
     if (result.mode !== "pr-check") return;
     expect(result.newFindings).toHaveLength(1);
     expect(result.newFindings[0].evidence).toContainEqual({ label: "manifest", value: "packages/web/package.json" });
+  });
+
+  it("falls back to the root manifest for a nested instruction without a nearer package", async () => {
+    const repo = await repository();
+    await repo.write("package.json", JSON.stringify({ scripts: { verify: "node verify.js" } }, null, 2));
+    await repo.write("packages/docs/AGENTS.md", "Run `pnpm run verify` before publishing.\n");
+    const base = repo.commit("add root verification instruction");
+    await repo.write("package.json", JSON.stringify({ scripts: {} }, null, 2));
+    const head = repo.commit("remove root verification script");
+
+    const result = await checkPullRequest(repo.cwd, base, head);
+    if (result.mode !== "pr-check") return;
+    expect(result.newFindings).toHaveLength(1);
+    expect(result.newFindings[0].evidence).toContainEqual({ label: "manifest", value: "package.json" });
   });
 
   it("fails safe and non-blocking when a requested workspace is ambiguous", async () => {

@@ -2,6 +2,7 @@ import { discoverInstructionSources } from "./discover";
 import { GitRepoView, renameHints } from "./git";
 import { extractClaims } from "./markdown";
 import { resolvePackageManifest } from "./packages";
+import { pathCandidates } from "./paths";
 import type {
   Claim,
   CurrentCheckResult,
@@ -17,7 +18,7 @@ function fingerprint(claim: Claim, manifestPath?: string): string {
   return `${claim.ruleId}:${claim.sourcePath}:${manifestPath ?? "unresolved"}:${claim.scriptName}:${claim.workspace ?? ""}`;
 }
 
-function stalePathFinding(claim: PathReferenceClaim, renameHint?: string): Finding {
+function stalePathFinding(claim: PathReferenceClaim, checkedPaths: string[], renameHint?: string): Finding {
   return {
     ruleId: "AGC001",
     severity: "error",
@@ -30,6 +31,7 @@ function stalePathFinding(claim: PathReferenceClaim, renameHint?: string): Findi
     renameHint,
     evidence: [
       { label: "referenced path", value: claim.targetPath },
+      ...(checkedPaths.length > 1 ? [{ label: "checked paths", value: checkedPaths.join(", ") }] : []),
       ...(renameHint ? [{ label: "git rename hint", value: renameHint }] : [])
     ]
   };
@@ -57,12 +59,18 @@ async function evaluate(view: GitRepoView, renameMap = new Map<string, string>()
   const sources = await discoverInstructionSources(view);
   const claims = sources.flatMap(extractClaims);
   const findings: Finding[] = [];
+  const validFingerprints = new Set<string>();
   let skippedClaims = 0;
 
   for (const claim of claims) {
     if (claim.ruleId === "AGC001") {
-      if (!(await view.exists(claim.targetPath))) {
-        findings.push(stalePathFinding(claim, renameMap.get(claim.targetPath)));
+      const candidates = pathCandidates(claim);
+      const resolves = await Promise.all(candidates.map((candidate) => view.exists(candidate)));
+      if (!resolves.some(Boolean)) {
+        const renameHint = candidates.map((candidate) => renameMap.get(candidate)).find(Boolean);
+        findings.push(stalePathFinding(claim, candidates, renameHint));
+      } else {
+        validFingerprints.add(fingerprint(claim));
       }
       continue;
     }
@@ -72,19 +80,25 @@ async function evaluate(view: GitRepoView, renameMap = new Map<string, string>()
       skippedClaims += 1;
       continue;
     }
-    if (!resolved.hasScript) findings.push(staleScriptFinding(claim, resolved.path));
+    if (!resolved.hasScript) {
+      findings.push(staleScriptFinding(claim, resolved.path));
+    } else {
+      validFingerprints.add(fingerprint(claim, resolved.path));
+    }
   }
 
-  return { findings, skippedClaims };
+  return { findings, validFingerprints: [...validFingerprints], skippedClaims };
 }
 
-function classify(base: Finding[], head: Finding[]) {
-  const baseByFingerprint = new Map(base.map((finding) => [finding.fingerprint, finding]));
-  const headByFingerprint = new Map(head.map((finding) => [finding.fingerprint, finding]));
+function classify(base: EvaluationResult, head: EvaluationResult) {
+  const baseByFingerprint = new Map(base.findings.map((finding) => [finding.fingerprint, finding]));
+  const headByFingerprint = new Map(head.findings.map((finding) => [finding.fingerprint, finding]));
+  const baseValid = new Set(base.validFingerprints);
   return {
-    newFindings: head.filter((finding) => !baseByFingerprint.has(finding.fingerprint)),
-    existingFindings: head.filter((finding) => baseByFingerprint.has(finding.fingerprint)),
-    fixedFindings: base.filter((finding) => !headByFingerprint.has(finding.fingerprint))
+    newFindings: head.findings.filter((finding) => !baseByFingerprint.has(finding.fingerprint) && baseValid.has(finding.fingerprint)),
+    unprovenFindings: head.findings.filter((finding) => !baseByFingerprint.has(finding.fingerprint) && !baseValid.has(finding.fingerprint)),
+    existingFindings: head.findings.filter((finding) => baseByFingerprint.has(finding.fingerprint)),
+    fixedFindings: base.findings.filter((finding) => !headByFingerprint.has(finding.fingerprint))
   };
 }
 
@@ -109,7 +123,7 @@ export async function checkPullRequest(cwd: string, base: string, head: string):
     evaluate(new GitRepoView(cwd, resolvedBase)),
     evaluate(new GitRepoView(cwd, resolvedHead), renameMap)
   ]);
-  const groups = classify(baseResult.findings, headResult.findings);
+  const groups = classify(baseResult, headResult);
   return {
     mode: "pr-check",
     base: resolvedBase,

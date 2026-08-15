@@ -66,7 +66,7 @@ High-value variant: recognize a rename and report the likely new path.
 
 #### AGC002 — Referenced package script no longer exists
 
-Detect commands such as `npm run test:e2e`, `pnpm lint`, or equivalent package-script references when the named script is missing from the relevant package manifest at the head revision.
+Detect explicit `npm run test:e2e`, `pnpm run lint`, or `yarn run build` package-script references when the named script is missing from the relevant package manifest at the head revision. Short forms and package binaries are intentionally skipped.
 
 For PR mode, prioritize scripts that existed at the base revision and were removed or renamed by the PR.
 
@@ -106,8 +106,8 @@ Given a base revision and a head revision:
 1. evaluate relevant repository facts and instruction references at the base;
 2. evaluate them again at the head;
 3. identify findings present only at the head, or findings materially worsened by the change;
-4. report those as PR-introduced drift;
-5. optionally report pre-existing findings separately as baseline debt.
+4. report as blocking PR-introduced drift only when the same claim resolved at base and is invalid at head;
+5. report head-only invalid claims as non-blocking `unproven` findings, and pre-existing findings separately as baseline debt.
 
 This avoids the common CI adoption problem where a new tool immediately fails on years of existing documentation debt.
 
@@ -254,8 +254,8 @@ The research confirms that coding-agent instruction drift is real, but it also c
 
 The v0.1 implementation is limited to two checks:
 
-1. **AGC001 — PR-introduced stale repository path.** Extract only high-confidence repository-relative path references. Report when the path exists at base and is missing at head; show a Git rename hint only as supplemental evidence.
-2. **AGC002 — PR-introduced stale package script.** Extract explicit npm/pnpm/yarn script invocations and report only scripts that existed in the resolved manifest at base and are missing at head.
+1. **AGC001 — PR-introduced stale repository path.** Extract only high-confidence repository-relative path references. Report only when the same claim resolves at base and is missing at head; show a Git rename hint only as supplemental evidence. Head-only invalid claims are non-blocking because their prior validity is unproven.
+2. **AGC002 — PR-introduced stale package script.** Extract only explicit `npm run`/`pnpm run`/`yarn run` invocations and report scripts that existed in the resolved manifest at base and are missing at head.
 
 Do not ship AGC003 runtime-version drift or AGC004 scope drift in v0.1. Runtime authority needs an explicit precedence policy, and instruction scope semantics vary substantially across Codex, Claude Code, Copilot, and Gemini CLI. Do not add generic Markdown linting, quality scoring, LLM-based contradiction detection, arbitrary command execution, or automatic rewrites.
 

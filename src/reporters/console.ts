@@ -31,6 +31,7 @@ export function renderConsole(result: CheckResult): string {
   return [
     `Agent Groundcheck — PR drift (${result.base.slice(0, 12)} → ${result.head.slice(0, 12)})`,
     renderGroup("new blocking findings", result.newFindings),
+    renderGroup("unproven non-blocking findings", result.unprovenFindings),
     renderGroup("existing non-blocking debt", result.existingFindings),
     renderGroup("fixed findings", result.fixedFindings),
     `skipped ambiguous claims: base ${result.skippedClaims.base}, head ${result.skippedClaims.head}`
@@ -43,6 +44,7 @@ export function renderSummary(result: CheckResult): string {
   }
   return [
     `New blocking findings: ${result.newFindings.length}.`,
+    `Unproven non-blocking findings: ${result.unprovenFindings.length}.`,
     `Existing non-blocking debt: ${result.existingFindings.length}.`,
     `Fixed findings: ${result.fixedFindings.length}.`,
     `Skipped ambiguous claims: base ${result.skippedClaims.base}, head ${result.skippedClaims.head}.`

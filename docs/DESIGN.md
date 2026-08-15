@@ -15,7 +15,7 @@ The first implementation should optimize for explainability and low false positi
 
 The production core is shared by `agent-groundcheck check`, `agent-groundcheck pr-check`, and the GitHub Action. It reads base/head Git objects directly, parses Markdown AST nodes, and implements only AGC001 (path drift) and AGC002 (explicit package-script drift). `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md` are content-inspected; full scope, precedence, import, glob, and symlink semantics are deferred.
 
-PR mode emits `new`, `existing`, and `fixed` groups. Only new findings produce the default nonzero exit code and Action annotations. The current-state command may report any high-confidence stale claim. Ambiguous workspace resolution is skipped rather than guessed.
+PR mode emits `new`, `unproven`, `existing`, and `fixed` groups. Only `new` findings produce the default nonzero exit code and Action annotations: the same claim must resolve at base and fail at head. A claim first observed invalid at head is `unproven` and non-blocking. The current-state command may report any high-confidence stale claim. Ambiguous workspace resolution is skipped rather than guessed.
 
 See [`IMPLEMENTATION_NOTES.md`](./IMPLEMENTATION_NOTES.md) for the exact extraction boundary, public-history validation status, and fixture provenance.
 
@@ -244,18 +244,19 @@ Potential normalization:
 
 - strip punctuation;
 - normalize `./`;
+- check repository-root and instruction-directory candidates for nested guidance;
 - preserve directory suffix `/`;
-- reject URL schemes;
+- reject URL schemes, import aliases, and MIME types;
 - reject obvious shell switches.
 
 ### 7.3 Package-script extraction
 
-Recognize explicit invocations such as:
+Recognize only explicit `run` invocations such as:
 
 ```text
 npm run test:e2e
-pnpm test
 pnpm run lint
+yarn run build
 npm run build --workspace web
 ```
 
@@ -308,7 +309,7 @@ False-positive controls:
 
 **Purpose:** detect instruction commands that reference missing package scripts.
 
-PR behavior is especially valuable when the named script existed at base and was removed or renamed at head.
+PR behavior is especially valuable when the named script existed at base and was removed or renamed at head. Short forms and package binaries are skipped because they cannot reliably be distinguished from package scripts without additional repository-specific semantics.
 
 Possible future enhancement: suggest a replacement when one script was renamed and the command body remains similar.
 
