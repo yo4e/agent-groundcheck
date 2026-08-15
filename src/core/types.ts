@@ -53,6 +53,7 @@ export interface Finding {
 
 export interface EvaluationResult {
   findings: Finding[];
+  validFingerprints: string[];
   skippedClaims: number;
 }
 
@@ -61,6 +62,7 @@ export interface PrCheckResult {
   base: string;
   head: string;
   newFindings: Finding[];
+  unprovenFindings: Finding[];
   existingFindings: Finding[];
   fixedFindings: Finding[];
   skippedClaims: {

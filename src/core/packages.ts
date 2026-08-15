@@ -28,15 +28,24 @@ function parseManifest(pathname: string, content: string): PackageManifest | und
   }
 }
 
-async function manifests(view: GitRepoView): Promise<PackageManifest[]> {
-  const files = (await view.listFiles()).filter((pathname) => path.posix.basename(pathname) === "package.json");
-  const parsed = await Promise.all(
-    files.map(async (pathname) => {
-      const content = await view.readText(pathname);
-      return content === null ? undefined : parseManifest(pathname, content);
-    })
-  );
-  return parsed.filter((manifest): manifest is PackageManifest => Boolean(manifest));
+const manifestCache = new WeakMap<GitRepoView, Promise<PackageManifest[]>>();
+
+function manifests(view: GitRepoView): Promise<PackageManifest[]> {
+  const cached = manifestCache.get(view);
+  if (cached) return cached;
+
+  const parsed = (async (): Promise<PackageManifest[]> => {
+    const files = (await view.listFiles()).filter((pathname) => path.posix.basename(pathname) === "package.json");
+    const entries = await Promise.all(
+      files.map(async (pathname) => {
+        const content = await view.readText(pathname);
+        return content === null ? undefined : parseManifest(pathname, content);
+      })
+    );
+    return entries.filter((manifest): manifest is PackageManifest => Boolean(manifest));
+  })();
+  manifestCache.set(view, parsed);
+  return parsed;
 }
 
 function closestManifest(sourcePath: string, allManifests: PackageManifest[]): PackageManifest | undefined {
@@ -44,7 +53,7 @@ function closestManifest(sourcePath: string, allManifests: PackageManifest[]): P
   const candidates = allManifests
     .filter((manifest) => {
       const manifestDirectory = path.posix.dirname(manifest.path);
-      return sourceDirectory === manifestDirectory || sourceDirectory.startsWith(`${manifestDirectory}/`);
+      return manifestDirectory === "." || sourceDirectory === manifestDirectory || sourceDirectory.startsWith(`${manifestDirectory}/`);
     })
     .sort((left, right) => path.posix.dirname(right.path).length - path.posix.dirname(left.path).length);
   return candidates[0];

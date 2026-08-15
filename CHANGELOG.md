@@ -6,7 +6,19 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
-- Contributor, security, and release guidance.
+- Public-repository dogfooding record and provenance for observed precision regressions.
+- Non-blocking `unprovenFindings` for head-only invalid claims whose base validity cannot be established.
+
+### Changed
+
+- AGC001 now resolves high-confidence paths relative to both the repository root and a nested instruction file's directory.
+- AGC002 now accepts only explicit `npm run`, `pnpm run`, and `yarn run` forms, preventing package-binary and short-form false positives.
+- Nested instruction files now fall back to a root `package.json` when resolving package scripts, with manifest parsing cached per revision.
+
+### Fixed
+
+- Excluded TypeScript import aliases and common MIME types from AGC001 extraction.
+- Prevented CI from blocking on a claim that first appears already-invalid at head.
 
 ## [0.1.0] - 2026-08-15
 

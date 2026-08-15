@@ -29,8 +29,9 @@ Current-state linters can report every stale reference already present in a repo
 ```text
 findings(base) + findings(head)
         │
-        ├── new       → blocking by default
-        ├── existing  → reported, non-blocking
+        ├── new       → valid at base, invalid at head; blocking by default
+        ├── unproven  → first observed invalid at head; reported, non-blocking
+        ├── existing  → invalid at both revisions; reported, non-blocking
         └── fixed     → reported for visibility
 ```
 
@@ -40,8 +41,8 @@ That lets a repository adopt the check without first cleaning historical documen
 
 | Rule | Detects | Blocking condition in `pr-check` |
 | --- | --- | --- |
-| **AGC001** | A high-confidence repository-relative path in an instruction file is missing. | The path existed at base and is missing at head. A Git rename may be shown as a hint, but never creates a finding by itself. |
-| **AGC002** | An explicit npm, pnpm, or yarn package-script invocation no longer resolves. | The resolved manifest contained the script at base and does not contain it at head. |
+| **AGC001** | A high-confidence repository-relative path in an instruction file is missing. | The same claim resolved at base and is missing at head. A Git rename may be shown as a hint, but never creates a finding by itself. |
+| **AGC002** | An explicit `npm run`, `pnpm run`, or `yarn run` package-script invocation no longer resolves. | The resolved manifest contained the script at base and does not contain it at head. |
 
 ### AGC001 example
 
@@ -81,7 +82,7 @@ agent-groundcheck check --ref HEAD --format json
 
 ### Pull-request check
 
-`pr-check` is the recommended CI mode. It evaluates both revisions and classifies findings as `newFindings`, `existingFindings`, and `fixedFindings`.
+`pr-check` is the recommended CI mode. It evaluates both revisions and classifies findings as `newFindings`, `unprovenFindings`, `existingFindings`, and `fixedFindings`. Only `newFindings` are blocking: each must be a claim that resolved at base and became invalid at head. A claim first introduced already-invalid at head is retained as `unprovenFindings` for visibility, but does not fail CI because this tool cannot prove a repository change made it false.
 
 ```bash
 agent-groundcheck pr-check --base origin/main --head HEAD
@@ -142,9 +143,9 @@ This is **content inspection**, not a claim that v0.1 implements each tool's ful
 Agent Groundcheck chooses false negatives over noisy false positives.
 
 - It parses Markdown with an AST parser; it does not scan whole documents with one broad regular expression.
-- AGC001 accepts repository paths found in inline code, relative Markdown links, and fenced code blocks. URLs, globs, placeholders, absolute paths, parent traversal, and unstructured prose are ignored.
-- Accepted path claims are resolved from the repository root in v0.1.
-- AGC002 recognizes explicit npm/pnpm/yarn script invocations. Without `--workspace`, it uses the closest enclosing `package.json`. A `--workspace` reference is checked only when it uniquely matches one package name; ambiguous cases are skipped and remain non-blocking.
+- AGC001 accepts repository paths found in inline code, relative Markdown links, and fenced code blocks. URLs, globs, placeholders, import aliases, MIME types, absolute paths, parent traversal, and unstructured prose are ignored.
+- Accepted path claims are checked against both the repository root and, for a nested instruction file, that instruction file's directory. This avoids treating a valid local guide as stale while remaining deterministic.
+- AGC002 recognizes only explicit `npm run NAME`, `pnpm run NAME`, and `yarn run NAME` forms. Short forms and package binaries such as `pnpm lint` or `pnpm drizzle-kit` are intentionally skipped because they may not name a package script. Without `--workspace`, it uses the closest enclosing `package.json`, falling back to the root manifest. A `--workspace` reference is checked only when it uniquely matches one package name; ambiguous cases are skipped and remain non-blocking.
 - The tool does not run extracted commands, evaluate repository text, call a hosted API, or change your working tree to inspect revisions.
 - Base/head files are read directly from Git objects. Instruction content is treated as untrusted input, and oversized blobs are skipped.
 
@@ -163,7 +164,7 @@ pnpm check
 
 `pnpm check` runs TypeScript type checking, ESLint, unit tests, synthetic Git-repository integration tests, and the production build.
 
-The test suite includes base/head fixtures for deletion, rename hints, pre-existing debt, synchronized instruction updates, package-script removal, nearest-manifest resolution, and ambiguous workspace handling. See [fixture provenance](tests/fixtures/PROVENANCE.md).
+The test suite includes base/head fixtures for deletion, rename hints, pre-existing debt, head-only unproven claims, synchronized instruction updates, nested relative paths, package-script removal, root-manifest fallback, nearest-manifest resolution, and ambiguous workspace handling. See [fixture provenance](tests/fixtures/PROVENANCE.md) and the [dogfooding record](docs/DOGFOODING.md).
 
 ## Privacy and security
 
@@ -183,3 +184,5 @@ Contributions, bug reports, rule-precision feedback, and compatibility reports a
 - [Technical design](docs/DESIGN.md)
 - [Market and technical research report](docs/RESEARCH_REPORT_2026-08-15.md)
 - [v0.1 implementation decision](docs/IMPLEMENTATION_NOTES.md)
+- [dogfooding and public-history record](docs/DOGFOODING.md)
+- [release guide](docs/RELEASING.md)

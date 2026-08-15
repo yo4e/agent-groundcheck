@@ -32,6 +32,8 @@ describe("extractClaims", () => {
         "Visit `https://example.com/docs`.",
         "Read `docs/**/*.md`.",
         "Open `${DOC_PATH}`.",
+        "Use `@/components/ui/button` as an import alias.",
+        "Send `text/plain` for plain text responses.",
         "The src directory contains source code."
       ].join("\n")
     });
@@ -39,11 +41,11 @@ describe("extractClaims", () => {
     expect(claims).toEqual([]);
   });
 
-  it("extracts explicit package scripts but not package-manager subcommands", () => {
+  it("extracts only explicit run-form package scripts", () => {
     const claims = extractClaims({
       path: "AGENTS.md",
       kind: "agents",
-      content: "Use `npm install`, `yarn add typescript`, and `npm run verify`."
+      content: "Use `npm install`, `yarn add typescript`, `pnpm drizzle-kit push`, `pnpm lint`, and `npm run verify`."
     });
 
     expect(claims).toEqual([

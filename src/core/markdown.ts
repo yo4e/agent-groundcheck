@@ -9,33 +9,8 @@ type MarkdownNode = {
   children?: MarkdownNode[];
 };
 
-const RESERVED_PACKAGE_MANAGER_COMMANDS = new Set([
-  "add",
-  "audit",
-  "cache",
-  "config",
-  "create",
-  "dlx",
-  "exec",
-  "fetch",
-  "help",
-  "import",
-  "init",
-  "install",
-  "link",
-  "list",
-  "outdated",
-  "pack",
-  "publish",
-  "remove",
-  "store",
-  "uninstall",
-  "unlink",
-  "update",
-  "why"
-]);
-
-const SCRIPT_PATTERN = /\b(npm|pnpm|yarn)\s+(?:(run)\s+)?([A-Za-z0-9][A-Za-z0-9:_-]*)(?:\s+--workspace(?:=|\s+)([A-Za-z0-9@/_-]+))?/g;
+const SCRIPT_PATTERN = /\b(npm|pnpm|yarn)\s+run\s+([A-Za-z0-9][A-Za-z0-9:_-]*)(?:\s+--workspace(?:=|\s+)([A-Za-z0-9@/_-]+))?/g;
+const MIME_TYPE_PREFIXES = new Set(["application", "audio", "font", "image", "message", "model", "multipart", "text", "video"]);
 
 function lineFor(node: MarkdownNode, fallback: number): number {
   return node.position?.start?.line ?? fallback;
@@ -44,10 +19,12 @@ function lineFor(node: MarkdownNode, fallback: number): number {
 function normalizePath(candidate: string): string | undefined {
   let value = candidate.trim().replace(/^[`'"(]+|[`'"),.;:]+$/g, "");
   if (!value || value === "." || value === "..") return undefined;
-  if (/^(?:[a-z][a-z0-9+.-]*:|\/|~\/|#)/i.test(value)) return undefined;
+  if (/^(?:[a-z][a-z0-9+.-]*:|\/|~\/|#|@)/i.test(value)) return undefined;
   value = value.split(/[?#]/, 1)[0];
   if (!value) return undefined;
   if (value.includes("${") || value.includes("{{") || /[*?[]/.test(value)) return undefined;
+  const [firstSegment, secondSegment, ...remainingSegments] = value.split("/");
+  if (remainingSegments.length === 0 && MIME_TYPE_PREFIXES.has(firstSegment) && Boolean(secondSegment)) return undefined;
   value = value.replace(/^\.\//, "");
   if (value.startsWith("../") || value.includes("/../")) return undefined;
   if (!value.includes("/") && !/^[A-Za-z0-9_.-]+\.(?:md|mdx|json|ya?ml|toml|[cm]?[jt]sx?|py|sh)$/i.test(value)) {
@@ -72,9 +49,7 @@ function extractScriptClaims(source: InstructionSource, rawText: string, line: n
   const claims: PackageScriptClaim[] = [];
   for (const match of rawText.matchAll(SCRIPT_PATTERN)) {
     const packageManager = match[1] as PackageScriptClaim["packageManager"];
-    const hasRunKeyword = Boolean(match[2]);
-    const scriptName = match[3];
-    if (!hasRunKeyword && RESERVED_PACKAGE_MANAGER_COMMANDS.has(scriptName)) continue;
+    const scriptName = match[2];
     claims.push({
       ruleId: "AGC002",
       sourcePath: source.path,
@@ -82,7 +57,7 @@ function extractScriptClaims(source: InstructionSource, rawText: string, line: n
       rawText,
       packageManager,
       scriptName,
-      workspace: match[4]
+      workspace: match[3]
     });
   }
   return claims;

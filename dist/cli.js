@@ -34,7 +34,7 @@ __export(cli_exports, {
   runCli: () => runCli
 });
 module.exports = __toCommonJS(cli_exports);
-var import_node_path2 = __toESM(require("path"));
+var import_node_path3 = __toESM(require("path"));
 var import_node_process = __toESM(require("process"));
 
 // src/core/discover.ts
@@ -50,24 +50,24 @@ var IGNORED_SEGMENTS = /* @__PURE__ */ new Set([
   "target",
   "vendor"
 ]);
-function instructionKind(path3) {
-  if (path3.endsWith("/AGENTS.md") || path3 === "AGENTS.md") return "agents";
-  if (path3.endsWith("/CLAUDE.md") || path3 === "CLAUDE.md") return "claude";
-  if (path3.endsWith("/GEMINI.md") || path3 === "GEMINI.md") return "gemini";
-  if (path3 === ".github/copilot-instructions.md") return "copilot";
+function instructionKind(path4) {
+  if (path4.endsWith("/AGENTS.md") || path4 === "AGENTS.md") return "agents";
+  if (path4.endsWith("/CLAUDE.md") || path4 === "CLAUDE.md") return "claude";
+  if (path4.endsWith("/GEMINI.md") || path4 === "GEMINI.md") return "gemini";
+  if (path4 === ".github/copilot-instructions.md") return "copilot";
   return void 0;
 }
-function isIgnored(path3) {
-  return path3.split("/").some((segment) => IGNORED_SEGMENTS.has(segment));
+function isIgnored(path4) {
+  return path4.split("/").some((segment) => IGNORED_SEGMENTS.has(segment));
 }
 async function discoverInstructionSources(view) {
   const files = await view.listFiles();
-  const candidates = files.filter((path3) => !isIgnored(path3) && instructionKind(path3));
+  const candidates = files.filter((path4) => !isIgnored(path4) && instructionKind(path4));
   const sources = [];
-  for (const path3 of candidates) {
-    const content = await view.readText(path3);
-    const kind = instructionKind(path3);
-    if (content !== null && kind) sources.push({ path: path3, kind, content });
+  for (const path4 of candidates) {
+    const content = await view.readText(path4);
+    const kind = instructionKind(path4);
+    if (content !== null && kind) sources.push({ path: path4, kind, content });
   }
   return sources;
 }
@@ -105,22 +105,22 @@ var GitRepoView = class {
     const output = await git(this.cwd, ["ls-tree", "-r", "--name-only", this.ref]);
     return output.split("\n").filter(Boolean);
   }
-  async exists(path3) {
+  async exists(path4) {
     try {
-      await git(this.cwd, ["cat-file", "-e", `${this.ref}:${path3}`]);
-      const type = (await git(this.cwd, ["cat-file", "-t", `${this.ref}:${path3}`])).trim();
+      await git(this.cwd, ["cat-file", "-e", `${this.ref}:${path4}`]);
+      const type = (await git(this.cwd, ["cat-file", "-t", `${this.ref}:${path4}`])).trim();
       return type === "blob" || type === "tree";
     } catch {
       return false;
     }
   }
-  async readText(path3) {
+  async readText(path4) {
     try {
-      const type = (await git(this.cwd, ["cat-file", "-t", `${this.ref}:${path3}`])).trim();
+      const type = (await git(this.cwd, ["cat-file", "-t", `${this.ref}:${path4}`])).trim();
       if (type !== "blob") return null;
-      const size = Number((await git(this.cwd, ["cat-file", "-s", `${this.ref}:${path3}`])).trim());
+      const size = Number((await git(this.cwd, ["cat-file", "-s", `${this.ref}:${path4}`])).trim());
       if (!Number.isFinite(size) || size > MAX_TEXT_BYTES) return null;
-      return await git(this.cwd, ["show", `${this.ref}:${path3}`]);
+      return await git(this.cwd, ["show", `${this.ref}:${path4}`]);
     } catch {
       return null;
     }
@@ -138,42 +138,20 @@ async function renameHints(cwd, base, head) {
 
 // src/core/markdown.ts
 var import_mdast_util_from_markdown = require("mdast-util-from-markdown");
-var RESERVED_PACKAGE_MANAGER_COMMANDS = /* @__PURE__ */ new Set([
-  "add",
-  "audit",
-  "cache",
-  "config",
-  "create",
-  "dlx",
-  "exec",
-  "fetch",
-  "help",
-  "import",
-  "init",
-  "install",
-  "link",
-  "list",
-  "outdated",
-  "pack",
-  "publish",
-  "remove",
-  "store",
-  "uninstall",
-  "unlink",
-  "update",
-  "why"
-]);
-var SCRIPT_PATTERN = /\b(npm|pnpm|yarn)\s+(?:(run)\s+)?([A-Za-z0-9][A-Za-z0-9:_-]*)(?:\s+--workspace(?:=|\s+)([A-Za-z0-9@/_-]+))?/g;
+var SCRIPT_PATTERN = /\b(npm|pnpm|yarn)\s+run\s+([A-Za-z0-9][A-Za-z0-9:_-]*)(?:\s+--workspace(?:=|\s+)([A-Za-z0-9@/_-]+))?/g;
+var MIME_TYPE_PREFIXES = /* @__PURE__ */ new Set(["application", "audio", "font", "image", "message", "model", "multipart", "text", "video"]);
 function lineFor(node, fallback) {
   return node.position?.start?.line ?? fallback;
 }
 function normalizePath(candidate) {
   let value = candidate.trim().replace(/^[`'"(]+|[`'"),.;:]+$/g, "");
   if (!value || value === "." || value === "..") return void 0;
-  if (/^(?:[a-z][a-z0-9+.-]*:|\/|~\/|#)/i.test(value)) return void 0;
+  if (/^(?:[a-z][a-z0-9+.-]*:|\/|~\/|#|@)/i.test(value)) return void 0;
   value = value.split(/[?#]/, 1)[0];
   if (!value) return void 0;
   if (value.includes("${") || value.includes("{{") || /[*?[]/.test(value)) return void 0;
+  const [firstSegment, secondSegment, ...remainingSegments] = value.split("/");
+  if (remainingSegments.length === 0 && MIME_TYPE_PREFIXES.has(firstSegment) && Boolean(secondSegment)) return void 0;
   value = value.replace(/^\.\//, "");
   if (value.startsWith("../") || value.includes("/../")) return void 0;
   if (!value.includes("/") && !/^[A-Za-z0-9_.-]+\.(?:md|mdx|json|ya?ml|toml|[cm]?[jt]sx?|py|sh)$/i.test(value)) {
@@ -196,9 +174,7 @@ function extractScriptClaims(source, rawText, line) {
   const claims = [];
   for (const match of rawText.matchAll(SCRIPT_PATTERN)) {
     const packageManager = match[1];
-    const hasRunKeyword = Boolean(match[2]);
-    const scriptName = match[3];
-    if (!hasRunKeyword && RESERVED_PACKAGE_MANAGER_COMMANDS.has(scriptName)) continue;
+    const scriptName = match[2];
     claims.push({
       ruleId: "AGC002",
       sourcePath: source.path,
@@ -206,7 +182,7 @@ function extractScriptClaims(source, rawText, line) {
       rawText,
       packageManager,
       scriptName,
-      workspace: match[4]
+      workspace: match[3]
     });
   }
   return claims;
@@ -261,21 +237,28 @@ function parseManifest(pathname, content) {
     return void 0;
   }
 }
-async function manifests(view) {
-  const files = (await view.listFiles()).filter((pathname) => import_node_path.default.posix.basename(pathname) === "package.json");
-  const parsed = await Promise.all(
-    files.map(async (pathname) => {
-      const content = await view.readText(pathname);
-      return content === null ? void 0 : parseManifest(pathname, content);
-    })
-  );
-  return parsed.filter((manifest) => Boolean(manifest));
+var manifestCache = /* @__PURE__ */ new WeakMap();
+function manifests(view) {
+  const cached = manifestCache.get(view);
+  if (cached) return cached;
+  const parsed = (async () => {
+    const files = (await view.listFiles()).filter((pathname) => import_node_path.default.posix.basename(pathname) === "package.json");
+    const entries = await Promise.all(
+      files.map(async (pathname) => {
+        const content = await view.readText(pathname);
+        return content === null ? void 0 : parseManifest(pathname, content);
+      })
+    );
+    return entries.filter((manifest) => Boolean(manifest));
+  })();
+  manifestCache.set(view, parsed);
+  return parsed;
 }
 function closestManifest(sourcePath, allManifests) {
   const sourceDirectory = import_node_path.default.posix.dirname(sourcePath);
   const candidates = allManifests.filter((manifest) => {
     const manifestDirectory = import_node_path.default.posix.dirname(manifest.path);
-    return sourceDirectory === manifestDirectory || sourceDirectory.startsWith(`${manifestDirectory}/`);
+    return manifestDirectory === "." || sourceDirectory === manifestDirectory || sourceDirectory.startsWith(`${manifestDirectory}/`);
   }).sort((left, right) => import_node_path.default.posix.dirname(right.path).length - import_node_path.default.posix.dirname(left.path).length);
   return candidates[0];
 }
@@ -293,12 +276,31 @@ async function resolvePackageManifest(view, claim) {
   return { path: manifest.path, hasScript: Object.hasOwn(manifest.scripts, claim.scriptName) };
 }
 
+// src/core/paths.ts
+var import_node_path2 = __toESM(require("path"));
+function normalizeCandidate(candidate) {
+  const normalized = import_node_path2.default.posix.normalize(candidate).replace(/^\.\//, "");
+  if (!normalized || normalized === "." || normalized === ".." || normalized.startsWith("../")) return void 0;
+  return normalized;
+}
+function pathCandidates(claim) {
+  const candidates = /* @__PURE__ */ new Set();
+  const rootCandidate = normalizeCandidate(claim.targetPath);
+  if (rootCandidate) candidates.add(rootCandidate);
+  const sourceDirectory = import_node_path2.default.posix.dirname(claim.sourcePath);
+  if (sourceDirectory !== ".") {
+    const localCandidate = normalizeCandidate(import_node_path2.default.posix.join(sourceDirectory, claim.targetPath));
+    if (localCandidate) candidates.add(localCandidate);
+  }
+  return [...candidates];
+}
+
 // src/core/engine.ts
 function fingerprint(claim, manifestPath) {
   if (claim.ruleId === "AGC001") return `${claim.ruleId}:${claim.sourcePath}:${claim.targetPath}`;
   return `${claim.ruleId}:${claim.sourcePath}:${manifestPath ?? "unresolved"}:${claim.scriptName}:${claim.workspace ?? ""}`;
 }
-function stalePathFinding(claim, renameHint) {
+function stalePathFinding(claim, checkedPaths, renameHint) {
   return {
     ruleId: "AGC001",
     severity: "error",
@@ -311,6 +313,7 @@ function stalePathFinding(claim, renameHint) {
     renameHint,
     evidence: [
       { label: "referenced path", value: claim.targetPath },
+      ...checkedPaths.length > 1 ? [{ label: "checked paths", value: checkedPaths.join(", ") }] : [],
       ...renameHint ? [{ label: "git rename hint", value: renameHint }] : []
     ]
   };
@@ -336,11 +339,17 @@ async function evaluate(view, renameMap = /* @__PURE__ */ new Map()) {
   const sources = await discoverInstructionSources(view);
   const claims = sources.flatMap(extractClaims);
   const findings = [];
+  const validFingerprints = /* @__PURE__ */ new Set();
   let skippedClaims = 0;
   for (const claim of claims) {
     if (claim.ruleId === "AGC001") {
-      if (!await view.exists(claim.targetPath)) {
-        findings.push(stalePathFinding(claim, renameMap.get(claim.targetPath)));
+      const candidates = pathCandidates(claim);
+      const resolves = await Promise.all(candidates.map((candidate) => view.exists(candidate)));
+      if (!resolves.some(Boolean)) {
+        const renameHint = candidates.map((candidate) => renameMap.get(candidate)).find(Boolean);
+        findings.push(stalePathFinding(claim, candidates, renameHint));
+      } else {
+        validFingerprints.add(fingerprint(claim));
       }
       continue;
     }
@@ -349,17 +358,23 @@ async function evaluate(view, renameMap = /* @__PURE__ */ new Map()) {
       skippedClaims += 1;
       continue;
     }
-    if (!resolved.hasScript) findings.push(staleScriptFinding(claim, resolved.path));
+    if (!resolved.hasScript) {
+      findings.push(staleScriptFinding(claim, resolved.path));
+    } else {
+      validFingerprints.add(fingerprint(claim, resolved.path));
+    }
   }
-  return { findings, skippedClaims };
+  return { findings, validFingerprints: [...validFingerprints], skippedClaims };
 }
 function classify(base, head) {
-  const baseByFingerprint = new Map(base.map((finding) => [finding.fingerprint, finding]));
-  const headByFingerprint = new Map(head.map((finding) => [finding.fingerprint, finding]));
+  const baseByFingerprint = new Map(base.findings.map((finding) => [finding.fingerprint, finding]));
+  const headByFingerprint = new Map(head.findings.map((finding) => [finding.fingerprint, finding]));
+  const baseValid = new Set(base.validFingerprints);
   return {
-    newFindings: head.filter((finding) => !baseByFingerprint.has(finding.fingerprint)),
-    existingFindings: head.filter((finding) => baseByFingerprint.has(finding.fingerprint)),
-    fixedFindings: base.filter((finding) => !headByFingerprint.has(finding.fingerprint))
+    newFindings: head.findings.filter((finding) => !baseByFingerprint.has(finding.fingerprint) && baseValid.has(finding.fingerprint)),
+    unprovenFindings: head.findings.filter((finding) => !baseByFingerprint.has(finding.fingerprint) && !baseValid.has(finding.fingerprint)),
+    existingFindings: head.findings.filter((finding) => baseByFingerprint.has(finding.fingerprint)),
+    fixedFindings: base.findings.filter((finding) => !headByFingerprint.has(finding.fingerprint))
   };
 }
 async function checkCurrent(cwd, ref = "HEAD") {
@@ -382,7 +397,7 @@ async function checkPullRequest(cwd, base, head) {
     evaluate(new GitRepoView(cwd, resolvedBase)),
     evaluate(new GitRepoView(cwd, resolvedHead), renameMap)
   ]);
-  const groups = classify(baseResult.findings, headResult.findings);
+  const groups = classify(baseResult, headResult);
   return {
     mode: "pr-check",
     base: resolvedBase,
@@ -421,6 +436,7 @@ function renderConsole(result) {
   return [
     `Agent Groundcheck \u2014 PR drift (${result.base.slice(0, 12)} \u2192 ${result.head.slice(0, 12)})`,
     renderGroup("new blocking findings", result.newFindings),
+    renderGroup("unproven non-blocking findings", result.unprovenFindings),
     renderGroup("existing non-blocking debt", result.existingFindings),
     renderGroup("fixed findings", result.fixedFindings),
     `skipped ambiguous claims: base ${result.skippedClaims.base}, head ${result.skippedClaims.head}`
@@ -469,7 +485,7 @@ function parseArgs(argv) {
     head: values.head,
     ref: values.ref,
     format,
-    cwd: import_node_path2.default.resolve(values.cwd ?? import_node_process.default.cwd())
+    cwd: import_node_path3.default.resolve(values.cwd ?? import_node_process.default.cwd())
   };
 }
 function hasBlockingFindings(result) {
