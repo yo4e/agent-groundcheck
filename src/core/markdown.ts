@@ -10,6 +10,7 @@ type MarkdownNode = {
 };
 
 const SCRIPT_PATTERN = /\b(npm|pnpm|yarn)\s+run\s+([A-Za-z0-9][A-Za-z0-9:_-]*)(?:\s+--workspace(?:=|\s+)([A-Za-z0-9@/_-]+))?/g;
+const CD_PREFIX_PATTERN = /(?:^|&&\s*)cd\s+([A-Za-z0-9][A-Za-z0-9._/-]*)\s*&&\s*$/;
 const MIME_TYPE_PREFIXES = new Set(["application", "audio", "font", "image", "message", "model", "multipart", "text", "video"]);
 
 function lineFor(node: MarkdownNode, fallback: number): number {
@@ -19,7 +20,8 @@ function lineFor(node: MarkdownNode, fallback: number): number {
 function normalizePath(candidate: string): string | undefined {
   let value = candidate.trim().replace(/^[`'"(]+|[`'"),.;:]+$/g, "");
   if (!value || value === "." || value === "..") return undefined;
-  if (/^(?:[a-z][a-z0-9+.-]*:|\/|~\/|#|@)/i.test(value)) return undefined;
+  if (/\s/.test(value)) return undefined;
+  if (/^(?:[a-z][a-z0-9+.-]*:|\/|~\/|#|@|[-%$])/i.test(value)) return undefined;
   value = value.split(/[?#]/, 1)[0];
   if (!value) return undefined;
   if (value.includes("${") || value.includes("{{") || /[*?[]/.test(value)) return undefined;
@@ -45,6 +47,13 @@ function extractPathClaim(source: InstructionSource, rawText: string, line: numb
   };
 }
 
+function workingDirectoryFor(rawText: string, commandIndex: number): string | undefined {
+  const match = rawText.slice(0, commandIndex).match(CD_PREFIX_PATTERN);
+  const candidate = match?.[1];
+  if (!candidate || candidate === "." || candidate.startsWith("../") || candidate.includes("/../")) return undefined;
+  return candidate.replace(/^\.\//, "").replace(/\/{2,}/g, "/");
+}
+
 function extractScriptClaims(source: InstructionSource, rawText: string, line: number): PackageScriptClaim[] {
   const claims: PackageScriptClaim[] = [];
   for (const match of rawText.matchAll(SCRIPT_PATTERN)) {
@@ -57,7 +66,8 @@ function extractScriptClaims(source: InstructionSource, rawText: string, line: n
       rawText,
       packageManager,
       scriptName,
-      workspace: match[3]
+      workspace: match[3],
+      workingDirectory: workingDirectoryFor(rawText, match.index ?? 0)
     });
   }
   return claims;

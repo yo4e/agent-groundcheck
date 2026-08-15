@@ -7071,6 +7071,7 @@ function defaultOnError(left, right) {
 
 // src/core/markdown.ts
 var SCRIPT_PATTERN = /\b(npm|pnpm|yarn)\s+run\s+([A-Za-z0-9][A-Za-z0-9:_-]*)(?:\s+--workspace(?:=|\s+)([A-Za-z0-9@/_-]+))?/g;
+var CD_PREFIX_PATTERN = /(?:^|&&\s*)cd\s+([A-Za-z0-9][A-Za-z0-9._/-]*)\s*&&\s*$/;
 var MIME_TYPE_PREFIXES = /* @__PURE__ */ new Set(["application", "audio", "font", "image", "message", "model", "multipart", "text", "video"]);
 function lineFor(node2, fallback) {
   return node2.position?.start?.line ?? fallback;
@@ -7078,7 +7079,8 @@ function lineFor(node2, fallback) {
 function normalizePath(candidate) {
   let value = candidate.trim().replace(/^[`'"(]+|[`'"),.;:]+$/g, "");
   if (!value || value === "." || value === "..") return void 0;
-  if (/^(?:[a-z][a-z0-9+.-]*:|\/|~\/|#|@)/i.test(value)) return void 0;
+  if (/\s/.test(value)) return void 0;
+  if (/^(?:[a-z][a-z0-9+.-]*:|\/|~\/|#|@|[-%$])/i.test(value)) return void 0;
   value = value.split(/[?#]/, 1)[0];
   if (!value) return void 0;
   if (value.includes("${") || value.includes("{{") || /[*?[]/.test(value)) return void 0;
@@ -7102,6 +7104,12 @@ function extractPathClaim(source, rawText, line) {
     targetPath
   };
 }
+function workingDirectoryFor(rawText, commandIndex) {
+  const match = rawText.slice(0, commandIndex).match(CD_PREFIX_PATTERN);
+  const candidate = match?.[1];
+  if (!candidate || candidate === "." || candidate.startsWith("../") || candidate.includes("/../")) return void 0;
+  return candidate.replace(/^\.\//, "").replace(/\/{2,}/g, "/");
+}
 function extractScriptClaims(source, rawText, line) {
   const claims = [];
   for (const match of rawText.matchAll(SCRIPT_PATTERN)) {
@@ -7114,7 +7122,8 @@ function extractScriptClaims(source, rawText, line) {
       rawText,
       packageManager,
       scriptName,
-      workspace: match[3]
+      workspace: match[3],
+      workingDirectory: workingDirectoryFor(rawText, match.index ?? 0)
     });
   }
   return claims;
@@ -7186,7 +7195,11 @@ function manifests(view) {
   manifestCache.set(view, parsed);
   return parsed;
 }
-function closestManifest(sourcePath, allManifests) {
+function closestManifest(sourcePath, allManifests, workingDirectory) {
+  if (workingDirectory) {
+    const matches = allManifests.filter((manifest) => import_node_path.default.posix.dirname(manifest.path) === workingDirectory);
+    return matches.length === 1 ? matches[0] : void 0;
+  }
   const sourceDirectory = import_node_path.default.posix.dirname(sourcePath);
   const candidates = allManifests.filter((manifest) => {
     const manifestDirectory = import_node_path.default.posix.dirname(manifest.path);
@@ -7202,7 +7215,7 @@ async function resolvePackageManifest(view, claim) {
     if (matches.length !== 1) return void 0;
     manifest = matches[0];
   } else {
-    manifest = closestManifest(claim.sourcePath, allManifests);
+    manifest = closestManifest(claim.sourcePath, allManifests, claim.workingDirectory);
   }
   if (!manifest) return void 0;
   return { path: manifest.path, hasScript: Object.hasOwn(manifest.scripts, claim.scriptName) };

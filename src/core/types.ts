@@ -29,6 +29,7 @@ export interface PackageScriptClaim extends ClaimBase {
   packageManager: "npm" | "pnpm" | "yarn";
   scriptName: string;
   workspace?: string;
+  workingDirectory?: string;
 }
 
 export type Claim = PathReferenceClaim | PackageScriptClaim;
