@@ -48,7 +48,12 @@ function manifests(view: GitRepoView): Promise<PackageManifest[]> {
   return parsed;
 }
 
-function closestManifest(sourcePath: string, allManifests: PackageManifest[]): PackageManifest | undefined {
+function closestManifest(sourcePath: string, allManifests: PackageManifest[], workingDirectory?: string): PackageManifest | undefined {
+  if (workingDirectory) {
+    const matches = allManifests.filter((manifest) => path.posix.dirname(manifest.path) === workingDirectory);
+    return matches.length === 1 ? matches[0] : undefined;
+  }
+
   const sourceDirectory = path.posix.dirname(sourcePath);
   const candidates = allManifests
     .filter((manifest) => {
@@ -71,7 +76,7 @@ export async function resolvePackageManifest(
     if (matches.length !== 1) return undefined;
     manifest = matches[0];
   } else {
-    manifest = closestManifest(claim.sourcePath, allManifests);
+    manifest = closestManifest(claim.sourcePath, allManifests, claim.workingDirectory);
   }
 
   if (!manifest) return undefined;

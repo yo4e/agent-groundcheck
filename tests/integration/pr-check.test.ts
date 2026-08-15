@@ -149,6 +149,22 @@ describe("pr-check", () => {
     expect(result.newFindings[0].evidence).toContainEqual({ label: "manifest", value: "packages/web/package.json" });
   });
 
+  it("resolves a cd-prefixed script against that working directory", async () => {
+    const repo = await repository();
+    await repo.write("package.json", JSON.stringify({ scripts: {} }, null, 2));
+    await repo.write("AGENTS.md", "Run `cd clients/web && npm run dev` during local development.\n");
+    await repo.write("clients/web/package.json", JSON.stringify({ scripts: { dev: "vite" } }, null, 2));
+    const base = repo.commit("add nested development command");
+    await repo.write("clients/web/package.json", JSON.stringify({ scripts: {} }, null, 2));
+    const head = repo.commit("remove nested development script");
+
+    const result = await checkPullRequest(repo.cwd, base, head);
+    if (result.mode !== "pr-check") return;
+    expect(result.newFindings).toHaveLength(1);
+    expect(result.newFindings[0]).toMatchObject({ ruleId: "AGC002" });
+    expect(result.newFindings[0].evidence).toContainEqual({ label: "manifest", value: "clients/web/package.json" });
+  });
+
   it("falls back to the root manifest for a nested instruction without a nearer package", async () => {
     const repo = await repository();
     await repo.write("package.json", JSON.stringify({ scripts: { verify: "node verify.js" } }, null, 2));

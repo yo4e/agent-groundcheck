@@ -34,6 +34,9 @@ describe("extractClaims", () => {
         "Open `${DOC_PATH}`.",
         "Use `@/components/ui/button` as an import alias.",
         "Send `text/plain` for plain text responses.",
+        "Run `python -m flake8 src/project/ --ignore=E501` before review.",
+        "Use `-o/--output-format` for the CLI option.",
+        "See `%APPDATA%/project` on Windows.",
         "The src directory contains source code."
       ].join("\n")
     });
@@ -50,6 +53,23 @@ describe("extractClaims", () => {
 
     expect(claims).toEqual([
       expect.objectContaining({ ruleId: "AGC002", packageManager: "npm", scriptName: "verify" })
+    ]);
+  });
+
+  it("records a static cd prefix as package script working-directory context", () => {
+    const claims = extractClaims({
+      path: "AGENTS.md",
+      kind: "agents",
+      content: "Run `cd clients/web && npm run dev` during local development."
+    });
+
+    expect(claims).toEqual([
+      expect.objectContaining({
+        ruleId: "AGC002",
+        packageManager: "npm",
+        scriptName: "dev",
+        workingDirectory: "clients/web"
+      })
     ]);
   });
 });
